@@ -27,4 +27,7 @@ public interface IQueueService
     /// Дугаар харуулах дэлгэцэд ашиглана.
     /// </summary>
     Task<int> GetCurrentNumberAsync();
+
+
+    Task<int> GetWaitingCountAsync();
 }
