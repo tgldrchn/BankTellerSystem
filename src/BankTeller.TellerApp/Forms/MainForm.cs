@@ -12,13 +12,13 @@ public class MainForm : Form
 {
     // ── Services ────────────────────────────────────────────────
     /// <summary>Дугаарын дараалал удирдах сервис.</summary>
-    private readonly IQueueService _queueService = new MockQueueService();
+    private readonly IQueueService _queueService = new ApiQueueService();
 
     /// <summary>Мөнгөн гүйлгээ гүйцэтгэх сервис.</summary>
-    private readonly ITransactionService _transactionService = new MockTransactionService();
+    private readonly ITransactionService _transactionService = new ApiTransactionService();
 
     /// <summary>Валютын ханш унших/бичих сервис.</summary>
-    private readonly ICurrencyService _currencyService = new MockCurrencyService();
+    private readonly ICurrencyService _currencyService = new ApiCurrencyService();
 
     // ── Controls ────────────────────────────────────────────────
     private Panel _headerPanel = null!;
