@@ -1,11 +1,12 @@
 using BankTeller.Core.Models;
 using BankTeller.NumberTerminal.Services;
+using BankTeller.Core.Interfaces;
 
 namespace BankTeller.NumberTerminal;
 
 public partial class Form1 : Form
 {
-    private readonly IQueueClient _queueClient;
+    private readonly IQueueService _queueClient;
     private readonly TicketPdfService _ticketPdfService;
 
     public Form1()
@@ -14,7 +15,7 @@ public partial class Form1 : Form
 
         btnIssueTicket.Click += btnIssueTicket_Click;
 
-        _queueClient = new MockQueueService();
+        _queueClient = new ApiQueueService();
         _ticketPdfService = new TicketPdfService();
 
         lblTicketNumber.Text = "---";
@@ -28,7 +29,7 @@ public partial class Form1 : Form
             btnIssueTicket.Enabled = false;
             lblMessage.Text = "Дараагийн дугаарыг авч байна...";
 
-            var ticket = await _queueClient.IssueTicketAsync();
+            var ticket = await _queueClient.IssueNextAsync();
 
             ShowTicket(ticket);
 
@@ -56,7 +57,7 @@ public partial class Form1 : Form
 
     private void ShowTicket(QueueTicket ticket)
     {
-        var ticketNumber = $"A-{ticket.Number:D3}";
+        var ticketNumber = $"{ticket.Number:D}";
         var issuedTime = ticket.IssuedAt.ToLocalTime();
 
         lblTicketNumber.Text = ticketNumber;
