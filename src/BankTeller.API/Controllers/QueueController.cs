@@ -20,16 +20,7 @@ public class QueueController : ControllerBase
     }
 
     /// <summary>Терминалаас шинэ дугаар авах</summary>
-    [HttpPost("issue")]
-    public async Task<ActionResult<ApiResponse<object>>> Issue()
-    {
-        var ticket = await _queue.IssueNextAsync();
-        return Ok(ApiResponse<object>.Ok(new
-        {
-            ticket.Number,
-            ticket.IssuedAt
-        }));
-    }
+    
 
     /// <summary>Теллер дараагийн үйлчлүүлэгч дуудах</summary>
     [HttpPost("call-next")]
@@ -57,5 +48,13 @@ public class QueueController : ControllerBase
     {
         var count = await _queue.GetWaitingCountAsync();
         return Ok(ApiResponse<object>.Ok(new { Count = count }));
+    }
+    [HttpPost("issue")]
+    public async Task<ActionResult<ApiResponse<object>>> Issue()
+    {
+        var ticket = await _queue.IssueNextAsync();
+        // Терминал дугаар авахад TellerApp-д мэдэгдэнэ
+        await _hub.Clients.All.SendAsync("QueueUpdated");
+        return Ok(ApiResponse<object>.Ok(new { ticket.Number, ticket.IssuedAt }));
     }
 }

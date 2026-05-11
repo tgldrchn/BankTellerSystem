@@ -1,5 +1,6 @@
 ﻿using BankTeller.Core.Interfaces;
 using BankTeller.TellerApp.Services;
+using Microsoft.AspNetCore.SignalR.Client;
 
 namespace BankTeller.TellerApp.Forms;
 
@@ -20,6 +21,9 @@ public class MainForm : Form
     /// <summary>Валютын ханш унших/бичих сервис.</summary>
     private readonly ICurrencyService _currencyService = new ApiCurrencyService();
 
+    /// <summary>SignalR Hub холболт.</summary>
+    private HubConnection _hub = null!;
+
     // ── Controls ────────────────────────────────────────────────
     private Panel _headerPanel = null!;
     private Panel _numberPanel = null!;
@@ -34,13 +38,12 @@ public class MainForm : Form
 
     /// <summary>
     /// MainForm-ийг эхлүүлж UI байгуулна.
-    /// Mock сервисүүд шууд тохируулагдана; API бэлэн болсон үед
-    /// Program.cs-д DI-ээр солино.
     /// </summary>
     public MainForm()
     {
         InitializeComponents();
         _ = RefreshCurrentNumberAsync();
+        _ = ConnectSignalRAsync();
     }
 
     // ── UI Setup ────────────────────────────────────────────────
@@ -168,9 +171,6 @@ public class MainForm : Form
     /// <summary>
     /// Нэгдсэн загварын товч үүсгэх туслах метод.
     /// </summary>
-    /// <param name="text">Товчны текст.</param>
-    /// <param name="location">Байрлал.</param>
-    /// <param name="color">Арын өнгө.</param>
     private static Button CreateButton(string text, Point location, Color color)
     {
         var btn = new Button
@@ -188,7 +188,6 @@ public class MainForm : Form
         };
         btn.FlatAppearance.BorderSize = 0;
 
-        // Hover effect
         btn.MouseEnter += (_, _) =>
             btn.BackColor = ControlPaint.Dark(color, 0.1f);
         btn.MouseLeave += (_, _) =>
@@ -197,18 +196,57 @@ public class MainForm : Form
         return btn;
     }
 
+    // ── SignalR ──────────────────────────────────────────────────
+
+    /// <summary>
+    /// SignalR Hub-тай холбогдоно.
+    /// Дугаар авагдахад хүлээж буй тоо автоматаар шинэчлэгдэнэ.
+    /// Дугаар дуудагдахад дэлгэц шинэчлэгдэнэ.
+    /// </summary>
+    private async Task ConnectSignalRAsync()
+    {
+        _hub = new HubConnectionBuilder()
+            .WithUrl("http://localhost:5200/hubs/bank")
+            .WithAutomaticReconnect()
+            .Build();
+
+        // Дугаар дуудагдахад
+        _hub.On<int>("NumberCalled", number =>
+        {
+            Invoke(() =>
+            {
+                _lblCurrentNumber.Text = number.ToString();
+                SetStatus($"✓  Дугаар {number} дуудагдлаа  •  {DateTime.Now:HH:mm:ss}",
+                    Color.SeaGreen);
+            });
+        });
+
+        // Дугаар авагдахад хүлээж буй тоо шинэчлэгдэнэ
+        _hub.On("QueueUpdated", async () =>
+        {
+            var count = await _queueService.GetWaitingCountAsync();
+            Invoke(() => _lblWaiting.Text = $"Хүлээж буй: {count} үйлчлүүлэгч");
+        });
+
+        try
+        {
+            await _hub.StartAsync();
+            SetStatus("Серверт холбогдлоо", Color.SeaGreen);
+        }
+        catch
+        {
+            SetStatus("SignalR холбогдож чадсангүй", Color.Crimson);
+        }
+    }
+
     // ── Logic ────────────────────────────────────────────────────
 
     /// <summary>
     /// Дараагийн хүлээж буй үйлчлүүлэгчийг дуудна.
-    /// Дугаар дэлгэцэнд шинэчлэгдэж, Socket сервер дамжуулан
-    /// дугаарын дэлгэцэнд харуулах захиалга явуулна.
-    /// Хэрэв дараалал хоосон бол мэдэгдэл харуулна.
     /// </summary>
     private async Task CallNextAsync()
     {
         SetBusy(true, "Дуудаж байна...");
-
         try
         {
             var ticket = await _queueService.CallNextAsync();
@@ -265,21 +303,19 @@ public class MainForm : Form
         try
         {
             var count = await _queueService.GetWaitingCountAsync();
-            _lblWaiting.Text = $"Хүлээж буй: {count} үйлчлүүлэгч";
+            Invoke(() => _lblWaiting.Text = $"Хүлээж буй: {count} үйлчлүүлэгч");
         }
         catch
         {
-            _lblWaiting.Text = "Хүлээж буй: —";
+            Invoke(() => _lblWaiting.Text = "Хүлээж буй: —");
         }
     }
 
     // ── Helpers ─────────────────────────────────────────────────
 
     /// <summary>
-    /// Ачааллаж байх үед товчнуудыг идэвхгүй болгож статус харуулна.
+    /// Ачааллаж байх үед товчнуудыг идэвхгүй болгоно.
     /// </summary>
-    /// <param name="busy">Үнэн бол товчнуудыг хаана.</param>
-    /// <param name="message">Харуулах мессеж.</param>
     private void SetBusy(bool busy, string message)
     {
         _btnCallNext.Enabled = !busy;
@@ -292,11 +328,19 @@ public class MainForm : Form
     /// <summary>
     /// Доод хэсгийн статус мессеж болон өнгийг тохируулна.
     /// </summary>
-    /// <param name="message">Харуулах мессеж.</param>
-    /// <param name="color">Текстийн өнгө.</param>
     private void SetStatus(string message, Color color)
     {
         _lblStatus.Text = message;
         _lblStatus.ForeColor = color;
+    }
+
+    /// <summary>
+    /// Form хаагдахад SignalR холболтыг таслана.
+    /// </summary>
+    protected override async void OnFormClosing(FormClosingEventArgs e)
+    {
+        if (_hub != null)
+            await _hub.DisposeAsync();
+        base.OnFormClosing(e);
     }
 }

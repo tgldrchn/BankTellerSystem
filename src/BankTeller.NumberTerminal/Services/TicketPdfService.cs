@@ -15,13 +15,17 @@ public class TicketPdfService
     {
         QuestPDF.Settings.License = LicenseType.Community;
 
-        var ticketNumber = $"A-{ticket.Number:D3}";
+        var ticketNumber = $"{ticket.Number:D}";
         var issuedTime = ticket.IssuedAt.ToLocalTime();
 
-        var folderPath = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.Desktop),
-            "BankTickets"
-        );
+        var solutionRoot = Path.GetFullPath(
+    Path.Combine(AppDomain.CurrentDomain.BaseDirectory,
+    "..\\..\\..\\..\\.."));
+
+        var folderPath = Path.Combine(solutionRoot, "tickets");
+
+        // Folder байхгүй бол үүсгэнэ
+        Directory.CreateDirectory(folderPath);
 
         Directory.CreateDirectory(folderPath);
 

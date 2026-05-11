@@ -12,4 +12,5 @@
     <Project Path="tests/BankTeller.API.Tests/BankTeller.API.Tests.csproj" />
     <Project Path="tests/BankTeller.TellerApp.Tests/BankTeller.TellerApp.Tests.csproj" />
   </Folder>
+  <Folder Name="/tickets/" />
 </Solution>
