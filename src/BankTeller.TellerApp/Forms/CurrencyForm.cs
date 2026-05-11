@@ -87,6 +87,7 @@ public class CurrencyForm : Form
 
         _grid.Columns.Add(new DataGridViewTextBoxColumn
         {
+            Name = "CurrencyCode",
             HeaderText = "Валют",
             DataPropertyName = "CurrencyCode",
             Width = 90,
@@ -94,12 +95,14 @@ public class CurrencyForm : Form
         });
         _grid.Columns.Add(new DataGridViewTextBoxColumn
         {
+            Name = "BuyRate",
             HeaderText = "Авах ₮",
             DataPropertyName = "BuyRate",
             Width = 174
         });
         _grid.Columns.Add(new DataGridViewTextBoxColumn
         {
+            Name = "SellRate",
             HeaderText = "Зарах ₮",
             DataPropertyName = "SellRate",
             Width = 174
@@ -195,11 +198,17 @@ public class CurrencyForm : Form
         {
             foreach (DataGridViewRow row in _grid.Rows)
             {
-                var code = row.Cells[0].Value?.ToString() ?? "";
-                var buyRate = decimal.TryParse(row.Cells[1].Value?.ToString(), out var b) ? b : 0;
-                var sellRate = decimal.TryParse(row.Cells[2].Value?.ToString(), out var s) ? s : 0;
+                var code = row.Cells["CurrencyCode"].Value?.ToString() ?? "";
+                var buyRate = Convert.ToDecimal(row.Cells["BuyRate"].Value ?? 0);
+                var sellRate = Convert.ToDecimal(row.Cells["SellRate"].Value ?? 0);
 
-                await _currencyService.UpdateRateAsync(code, buyRate, sellRate);
+                var result = await _currencyService.UpdateRateAsync(code, buyRate, sellRate);
+                if (!result)
+                {
+                    _lblStatus.Text = $"⚠  {code} ханш хадгалагдсангүй.";
+                    _lblStatus.ForeColor = Color.Crimson;
+                    return;
+                }
             }
 
             _lblStatus.Text = $"✓  Амжилттай хадгаллаа  •  {DateTime.Now:HH:mm:ss}";

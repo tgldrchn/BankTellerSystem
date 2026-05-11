@@ -2,12 +2,12 @@
   <Folder Name="/src/">
     <Project Path="src/BankTeller.API/BankTeller.API.csproj" />
     <Project Path="src/BankTeller.Core/BankTeller.Core.csproj" />
+    <Project Path="src/BankTeller.CurrencyDisplay/BankTeller.CurrencyDisplay.csproj" />
     <Project Path="src/BankTeller.NumberTerminal/BankTeller.NumberTerminal.csproj" />
     <Project Path="src/BankTeller.TellerApp/BankTeller.TellerApp.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/BankTeller.API.Tests/BankTeller.API.Tests.csproj" />
-    <Project Path="tests/BankTeller.Core.Tests/BankTeller.Core.Tests.csproj" />
     <Project Path="tests/BankTeller.TellerApp.Tests/BankTeller.TellerApp.Tests.csproj" />
   </Folder>
 </Solution>

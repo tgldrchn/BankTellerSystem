@@ -1,0 +1,19 @@
+[
+  {
+    "Name": "New Profile",
+    "Projects": [
+      {
+        "Path": "src\\BankTeller.CurrencyDisplay\\BankTeller.CurrencyDisplay.csproj",
+        "Action": "Start"
+      },
+      {
+        "Path": "src\\BankTeller.API\\BankTeller.API.csproj",
+        "Action": "Start"
+      },
+      {
+        "Path": "src\\BankTeller.TellerApp\\BankTeller.TellerApp.csproj",
+        "Action": "Start"
+      }
+    ]
+  }
+]

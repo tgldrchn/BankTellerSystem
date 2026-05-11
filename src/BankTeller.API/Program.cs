@@ -26,9 +26,13 @@ builder.Services.AddScoped<IQueueService, QueueService>();
 builder.Services.AddScoped<ITransactionService, TransactionService>();
 builder.Services.AddScoped<ICurrencyService, CurrencyService>();
 
+
 // CORS
 builder.Services.AddCors(opt => opt.AddDefaultPolicy(p =>
-    p.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader()));
+    p.WithOrigins("http://localhost:5080")
+     .AllowAnyMethod()
+     .AllowAnyHeader()
+     .AllowCredentials()));
 
 var app = builder.Build();
 

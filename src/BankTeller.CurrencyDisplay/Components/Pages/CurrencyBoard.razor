@@ -1,0 +1,105 @@
+﻿@page "/"
+@rendermode InteractiveServer
+@using BankTeller.Core.Models
+@using BankTeller.Core.DTOs
+@using Microsoft.AspNetCore.SignalR.Client
+@implements IAsyncDisposable
+
+<PageTitle>Валютын ханш</PageTitle>
+
+<div class="currency-board">
+    <h1>Валютын ханш</h1>
+    <p>Сүүлд шинэчлэгдсэн: <strong>@_lastUpdated.ToString("HH:mm:ss")</strong></p>
+
+    @if (_rates == null)
+    {
+        <p>Ачааллаж байна...</p>
+    }
+    else if (!_rates.Any())
+    {
+        <p>Мэдээлэл байхгүй байна.</p>
+    }
+    else
+    {
+        <table>
+            <thead>
+                <tr>
+                    <th>Валют</th>
+                    <th>Авах ₮</th>
+                    <th>Зарах ₮</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var rate in _rates)
+                {
+                    <tr>
+                        <td>@rate.CurrencyCode</td>
+                        <td>@rate.BuyRate.ToString("N0")</td>
+                        <td>@rate.SellRate.ToString("N0")</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+
+    <p>@_error</p>
+</div>
+
+@code {
+    private List<CurrencyRate>? _rates;
+    private DateTime _lastUpdated = DateTime.Now;
+    private string _error = "";
+    private HubConnection? _hubConnection;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadRatesAsync();
+        await ConnectSignalRAsync();
+    }
+
+    private async Task LoadRatesAsync()
+    {
+        try
+        {
+            using var http = new HttpClient();
+            var response = await http.GetFromJsonAsync<ApiResponse<List<CurrencyRate>>>(
+                "http://localhost:5200/api/currency");
+            _rates = response?.Data ?? new List<CurrencyRate>();
+            _lastUpdated = DateTime.Now;
+        }
+        catch (Exception ex)
+        {
+            _error = $"Алдаа: {ex.Message}";
+            _rates = new List<CurrencyRate>();
+        }
+    }
+
+    private async Task ConnectSignalRAsync()
+    {
+        try
+        {
+            _hubConnection = new HubConnectionBuilder()
+                .WithUrl("http://localhost:5200/hubs/bank")
+                .WithAutomaticReconnect()
+                .Build();
+
+            _hubConnection.On("RateUpdated", async () =>
+            {
+                await LoadRatesAsync();
+                await InvokeAsync(StateHasChanged);
+            });
+
+            await _hubConnection.StartAsync();
+        }
+        catch (Exception ex)
+        {
+            _error = $"SignalR алдаа: {ex.Message}";
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_hubConnection is not null)
+            await _hubConnection.DisposeAsync();
+    }
+}
