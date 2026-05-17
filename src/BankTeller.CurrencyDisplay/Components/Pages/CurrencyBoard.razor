@@ -7,42 +7,68 @@
 
 <PageTitle>Валютын ханш</PageTitle>
 
-<div class="currency-board">
-    <h1>Валютын ханш</h1>
-    <p>Сүүлд шинэчлэгдсэн: <strong>@_lastUpdated.ToString("HH:mm:ss")</strong></p>
+<div class="cb-window">
 
-    @if (_rates == null)
-    {
-        <p>Ачааллаж байна...</p>
-    }
-    else if (!_rates.Any())
-    {
-        <p>Мэдээлэл байхгүй байна.</p>
-    }
-    else
-    {
-        <table>
-            <thead>
-                <tr>
-                    <th>Валют</th>
-                    <th>Авах ₮</th>
-                    <th>Зарах ₮</th>
-                </tr>
-            </thead>
-            <tbody>
+    <div class="cb-titlebar">
+        <span class="cb-dot dot-red"></span>
+        <span class="cb-dot dot-yellow"></span>
+        <span class="cb-dot dot-green"></span>
+        <span class="cb-wintitle">₮&nbsp; Валютын ханш — Blazor</span>
+    </div>
+
+    <div class="cb-body">
+
+        <div class="cb-toprow">
+            <span class="cb-heading">Валютын ханш</span>
+            <span class="cb-time">Сүүлд: <strong>@_lastUpdated.ToString("HH:mm:ss")</strong></span>
+        </div>
+
+        @if (_rates == null)
+        {
+            <p class="cb-muted">Ачааллаж байна...</p>
+        }
+        else if (!_rates.Any())
+        {
+            <p class="cb-muted">Мэдээлэл байхгүй байна.</p>
+        }
+        else
+        {
+            <div class="cb-cards">
                 @foreach (var rate in _rates)
                 {
-                    <tr>
-                        <td>@rate.CurrencyCode</td>
-                        <td>@rate.BuyRate.ToString("N0")</td>
-                        <td>@rate.SellRate.ToString("N0")</td>
-                    </tr>
+                    <div class="cb-card @GetCardClass(rate.CurrencyCode)">
+                        <div class="cb-code">@rate.CurrencyCode</div>
+                        <div class="cb-row">
+                            <span class="cb-label">Авах:</span>
+                            <span class="cb-val">@rate.BuyRate.ToString("N0")</span>
+                        </div>
+                        <div class="cb-sell-val @GetSellClass(rate.CurrencyCode)">
+                            @rate.SellRate.ToString("N0") ₮
+                        </div>
+                    </div>
                 }
-            </tbody>
-        </table>
-    }
+            </div>
+        }
 
-    <p>@_error</p>
+        @if (!string.IsNullOrEmpty(_error))
+        {
+            <p class="cb-error">@_error</p>
+        }
+
+        <p class="cb-status">
+            @if (_hubConnection?.State == HubConnectionState.Connected)
+            {
+                <span class="cb-dot-status dot-ok"></span>
+                <span>SignalR: ханш шинэчлэгдлээ</span>
+            }
+            else
+            {
+                <span class="cb-dot-status dot-err"></span>
+                <span>SignalR: холбогдож байна...</span>
+            }
+        </p>
+
+    </div>
 </div>
 
 @code {
@@ -50,6 +76,20 @@
     private DateTime _lastUpdated = DateTime.Now;
     private string _error = "";
     private HubConnection? _hubConnection;
+
+    private string GetCardClass(string code) => code switch
+    {
+        "CNY" => "cb-card--highlight-green",
+        "RUB" => "cb-card--highlight-red",
+        _ => ""
+    };
+
+    private string GetSellClass(string code) => code switch
+    {
+        "CNY" => "sell-green",
+        "RUB" => "sell-red",
+        _ => "sell-default"
+    };
 
     protected override async Task OnInitializedAsync()
     {
@@ -66,6 +106,7 @@
                 "http://localhost:5200/api/currency");
             _rates = response?.Data ?? new List<CurrencyRate>();
             _lastUpdated = DateTime.Now;
+            _error = "";
         }
         catch (Exception ex)
         {

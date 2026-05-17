@@ -13,6 +13,14 @@
       {
         "Path": "src\\BankTeller.TellerApp\\BankTeller.TellerApp.csproj",
         "Action": "Start"
+      },
+      {
+        "Path": "src\\BankTeller.NumberDisplay\\BankTeller.NumberDisplay.csproj",
+        "Action": "Start"
+      },
+      {
+        "Path": "src\\BankTeller.NumberTerminal\\BankTeller.NumberTerminal.csproj",
+        "Action": "Start"
       }
     ]
   }

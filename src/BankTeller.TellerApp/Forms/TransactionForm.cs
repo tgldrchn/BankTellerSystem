@@ -68,7 +68,7 @@ public class TransactionForm : Form
         };
         header.Controls.Add(new Label
         {
-            Text = "💸  Мөнгө шилжүүлэх",
+            Text = "Мөнгө шилжүүлэх",
             ForeColor = Color.White,
             Font = new Font("Segoe UI", 14, FontStyle.Bold),
             Dock = DockStyle.Fill,

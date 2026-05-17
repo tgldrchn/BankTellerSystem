@@ -4,6 +4,9 @@ using BankTeller.API.Hubs;
 using BankTeller.API.Services;
 using BankTeller.Core.Interfaces;
 using Microsoft.EntityFrameworkCore;
+using BankTeller.API.Sockets;
+
+
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -20,6 +23,10 @@ builder.Services.AddDbContext<AppDbContext>(opt =>
 builder.Services.AddSingleton<NumberDisplayChannel>();
 builder.Services.AddSingleton<TransactionChannel>();
 builder.Services.AddHostedService(p => p.GetRequiredService<TransactionChannel>());
+
+// Channels-ийн доор нэмнэ
+builder.Services.AddSingleton<SocketServer>();
+builder.Services.AddHostedService(p => p.GetRequiredService<SocketServer>());
 
 // Services
 builder.Services.AddScoped<IQueueService, QueueService>();
