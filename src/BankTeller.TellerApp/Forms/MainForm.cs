@@ -1,4 +1,6 @@
-﻿using BankTeller.Core.Interfaces;
+﻿using System.Drawing;
+using System.Windows.Forms;
+using BankTeller.Core.Interfaces;
 using BankTeller.TellerApp.Services;
 using Microsoft.AspNetCore.SignalR.Client;
 
@@ -12,21 +14,14 @@ namespace BankTeller.TellerApp.Forms;
 public class MainForm : Form
 {
     // ── Services ────────────────────────────────────────────────
-    /// <summary>Дугаарын дараалал удирдах сервис.</summary>
     private readonly IQueueService _queueService = new ApiQueueService();
-
-    /// <summary>Мөнгөн гүйлгээ гүйцэтгэх сервис.</summary>
     private readonly ITransactionService _transactionService = new ApiTransactionService();
-
-    /// <summary>Валютын ханш унших/бичих сервис.</summary>
     private readonly ICurrencyService _currencyService = new ApiCurrencyService();
-
-    /// <summary>SignalR Hub холболт.</summary>
     private HubConnection _hub = null!;
 
     // ── Controls ────────────────────────────────────────────────
-    private Panel _headerPanel = null!;
-    private Panel _numberPanel = null!;
+    private Panel _pnlTitleBar = null!;
+    private Panel _pnlNumberCard = null!;
     private Label _lblCurrentNumber = null!;
     private Label _lblWaiting = null!;
     private Label _lblStatus = null!;
@@ -34,11 +29,24 @@ public class MainForm : Form
     private Button _btnTransfer = null!;
     private Button _btnCurrency = null!;
 
-    // ── Constructor ─────────────────────────────────────────────
+    // ── Өнгөний тэмдэглэл (нэг палитр) ─────────────────────────
+    private static readonly Color ClrBg = Color.FromArgb(24, 28, 24);
+    private static readonly Color ClrCard = Color.FromArgb(30, 34, 30);
+    private static readonly Color ClrBorder = Color.FromArgb(46, 52, 46);
+    private static readonly Color ClrTitleBar = Color.FromArgb(35, 40, 35);
+    private static readonly Color ClrGreen = Color.FromArgb(15, 110, 86);
+    private static readonly Color ClrGreenHover = Color.FromArgb(10, 80, 65);
+    private static readonly Color ClrGreenLight = Color.FromArgb(58, 170, 128);
+    private static readonly Color ClrBeige = Color.FromArgb(212, 201, 162);
+    private static readonly Color ClrBeigeLight = Color.FromArgb(237, 227, 198);
+    private static readonly Color ClrMuted = Color.FromArgb(96, 112, 96);
+    private static readonly Color ClrBtnTransfer = Color.FromArgb(18, 90, 65);
+    private static readonly Color ClrBtnCurrency = Color.FromArgb(90, 72, 20);
+    private static readonly Color ClrOk = Color.FromArgb(80, 200, 140);
+    private static readonly Color ClrErr = Color.FromArgb(200, 80, 80);
+    private static readonly Color ClrWarn = Color.FromArgb(210, 150, 50);
+    // ────────────────────────────────────────────────────────────
 
-    /// <summary>
-    /// MainForm-ийг эхлүүлж UI байгуулна.
-    /// </summary>
     public MainForm()
     {
         InitializeComponents();
@@ -46,163 +54,149 @@ public class MainForm : Form
         _ = ConnectSignalRAsync();
     }
 
-    // ── UI Setup ────────────────────────────────────────────────
-
-    /// <summary>
-    /// Формын бүх UI элементүүдийг үүсгэж байрлуулна.
-    /// </summary>
     private void InitializeComponents()
     {
+        _pnlTitleBar = new Panel();
+        _pnlNumberCard = new Panel();
+        _lblCurrentNumber = new Label();
+        _lblWaiting = new Label();
+        _lblStatus = new Label();
+
+        // ── Цонх ────────────────────────────────────────────────
         Text = "Теллерийн апп";
-        Size = new Size(420, 600);
+        Size = new Size(420, 560);
         MinimumSize = new Size(420, 520);
         StartPosition = FormStartPosition.CenterScreen;
         FormBorderStyle = FormBorderStyle.FixedSingle;
-        BackColor = Color.FromArgb(245, 247, 250);
+        BackColor = ClrBg;
         MaximizeBox = false;
 
-        // ── Header ──────────────────────────────────────────────
-        _headerPanel = new Panel
-        {
-            Dock = DockStyle.Top,
-            Height = 60,
-            BackColor = Color.FromArgb(26, 60, 110)
-        };
+        // ── TitleBar ─────────────────────────────────────────────
+        _pnlTitleBar.Dock = DockStyle.Top;
+        _pnlTitleBar.Height = 44;
+        _pnlTitleBar.BackColor = ClrTitleBar;
+        _pnlTitleBar.Paint += PaintTitleBar;
 
-        var lblTitle = new Label
+        var lblWinTitle = new Label
         {
-            Text = "🏦  Теллерийн апп",
-            ForeColor = Color.White,
-            Font = new Font("Segoe UI", 14, FontStyle.Bold),
+            Text = "Теллерийн апп",
             Dock = DockStyle.Fill,
+            Font = new Font("Segoe UI", 10, FontStyle.Regular),
+            ForeColor = ClrBeige,
             TextAlign = ContentAlignment.MiddleLeft,
-            Padding = new Padding(16, 0, 0, 0)
+            Padding = new Padding(48, 0, 0, 0),
         };
-        _headerPanel.Controls.Add(lblTitle);
+        _pnlTitleBar.Controls.Add(lblWinTitle);
 
-        // ── Number display panel ─────────────────────────────────
-        _numberPanel = new Panel
+        // ── Хуваагч шугам ────────────────────────────────────────
+        var divider = new Panel
         {
-            Location = new Point(20, 80),
-            Size = new Size(362, 140),
-            BackColor = Color.White
+            BackColor = ClrBorder,
+            Size = new Size(362, 1),
+            Location = new Point(20, 52),
         };
-        _numberPanel.Paint += (s, e) =>
-        {
-            var rect = new Rectangle(0, 0, _numberPanel.Width - 1, _numberPanel.Height - 1);
-            using var pen = new Pen(Color.FromArgb(220, 225, 235), 1);
-            e.Graphics.DrawRectangle(pen, rect);
-        };
+
+        // ── Дугаарын карт ────────────────────────────────────────
+        _pnlNumberCard.Location = new Point(20, 66);
+        _pnlNumberCard.Size = new Size(362, 144);
+        _pnlNumberCard.BackColor = ClrCard;
+        _pnlNumberCard.Region = RoundedRegion(_pnlNumberCard.Size, 10);
+        _pnlNumberCard.Paint += PaintCardBorder;
 
         var lblNumberTitle = new Label
         {
             Text = "ОДООГИЙН ДУГААР",
-            Location = new Point(0, 16),
+            Location = new Point(0, 14),
             Size = new Size(362, 20),
             Font = new Font("Segoe UI", 8, FontStyle.Bold),
-            ForeColor = Color.Gray,
-            TextAlign = ContentAlignment.MiddleCenter
+            ForeColor = ClrMuted,
+            TextAlign = ContentAlignment.MiddleCenter,
+            BackColor = Color.Transparent,
         };
 
-        _lblCurrentNumber = new Label
-        {
-            Text = "—",
-            Location = new Point(0, 36),
-            Size = new Size(362, 72),
-            Font = new Font("Segoe UI", 52, FontStyle.Bold),
-            ForeColor = Color.FromArgb(26, 60, 110),
-            TextAlign = ContentAlignment.MiddleCenter
-        };
+        _lblCurrentNumber.Text = "—";
+        _lblCurrentNumber.Location = new Point(0, 34);
+        _lblCurrentNumber.Size = new Size(362, 80);
+        _lblCurrentNumber.Font = new Font("Courier New", 40, FontStyle.Bold);
+        _lblCurrentNumber.ForeColor = ClrGreenLight;
+        _lblCurrentNumber.BackColor = Color.Transparent;
+        _lblCurrentNumber.TextAlign = ContentAlignment.MiddleCenter;
 
-        _lblWaiting = new Label
-        {
-            Text = "Хүлээж буй: —",
-            Location = new Point(0, 110),
-            Size = new Size(362, 22),
-            Font = new Font("Segoe UI", 9),
-            ForeColor = Color.Gray,
-            TextAlign = ContentAlignment.MiddleCenter
-        };
+        _lblWaiting.Text = "Хүлээж буй: —";
+        _lblWaiting.Location = new Point(0, 116);
+        _lblWaiting.Size = new Size(362, 22);
+        _lblWaiting.Font = new Font("Segoe UI", 9);
+        _lblWaiting.ForeColor = ClrMuted;
+        _lblWaiting.BackColor = Color.Transparent;
+        _lblWaiting.TextAlign = ContentAlignment.MiddleCenter;
 
-        _numberPanel.Controls.AddRange(new Control[]
+        _pnlNumberCard.Controls.AddRange(new Control[]
             { lblNumberTitle, _lblCurrentNumber, _lblWaiting });
 
-        // ── Buttons ─────────────────────────────────────────────
-        _btnCallNext = CreateButton(
+        // ── Товчнууд ─────────────────────────────────────────────
+        _btnCallNext = MakeButton(
             "👤  Дараагийн үйлчлүүлэгч дуудах",
-            new Point(20, 240),
-            Color.FromArgb(26, 60, 110));
+            new Point(20, 228), ClrGreen, ClrGreenHover);
         _btnCallNext.Click += async (_, _) => await CallNextAsync();
 
-        _btnTransfer = CreateButton(
-            "💸  Мөнгө шилжүүлэх",
-            new Point(20, 310),
-            Color.FromArgb(22, 120, 80));
+        _btnTransfer = MakeButton(
+            "⇄  Мөнгө шилжүүлэх",
+            new Point(20, 294),
+            ClrBtnTransfer,
+            Color.FromArgb(12, 65, 46));
         _btnTransfer.Click += (_, _) =>
             new TransactionForm(_transactionService).ShowDialog();
 
-        _btnCurrency = CreateButton(
-            "💱  Валютын ханш өөрчлөх",
-            new Point(20, 380),
-            Color.FromArgb(180, 90, 20));
+        _btnCurrency = MakeButton(
+            "$  Валютын ханш өөрчлөх",
+            new Point(20, 360),
+            ClrBtnCurrency,
+            Color.FromArgb(65, 50, 12));
         _btnCurrency.Click += (_, _) =>
             new CurrencyForm(_currencyService).ShowDialog();
 
-        // ── Status label ────────────────────────────────────────
-        _lblStatus = new Label
-        {
-            Text = "Бэлэн",
-            Location = new Point(20, 448),
-            Size = new Size(362, 22),
-            Font = new Font("Segoe UI", 9),
-            ForeColor = Color.Gray,
-            TextAlign = ContentAlignment.MiddleCenter
-        };
+        // ── Статус ───────────────────────────────────────────────
+        _lblStatus.Text = "Ханш өөрчлөх цонх нээгдэж байна...";
+        _lblStatus.Location = new Point(20, 430);
+        _lblStatus.Size = new Size(362, 20);
+        _lblStatus.Font = new Font("Segoe UI", 8);
+        _lblStatus.ForeColor = ClrMuted;
+        _lblStatus.TextAlign = ContentAlignment.MiddleCenter;
+        _lblStatus.BackColor = Color.Transparent;
 
-        // ── Assemble ────────────────────────────────────────────
         Controls.AddRange(new Control[]
         {
-            _headerPanel, _numberPanel,
+            _pnlTitleBar, divider,
+            _pnlNumberCard,
             _btnCallNext, _btnTransfer, _btnCurrency,
-            _lblStatus
+            _lblStatus,
         });
     }
 
-    /// <summary>
-    /// Нэгдсэн загварын товч үүсгэх туслах метод.
-    /// </summary>
-    private static Button CreateButton(string text, Point location, Color color)
+    // ── Товч үүсгэх ──────────────────────────────────────────────
+    private static Button MakeButton(string text, Point loc, Color color, Color hover)
     {
         var btn = new Button
         {
             Text = text,
-            Location = location,
-            Size = new Size(362, 56),
+            Location = loc,
+            Size = new Size(362, 52),
             Font = new Font("Segoe UI", 11, FontStyle.Bold),
             BackColor = color,
-            ForeColor = Color.White,
+            ForeColor = Color.FromArgb(237, 227, 198),   // beige текст
             FlatStyle = FlatStyle.Flat,
             Cursor = Cursors.Hand,
             TextAlign = ContentAlignment.MiddleLeft,
-            Padding = new Padding(12, 0, 0, 0)
+            Padding = new Padding(16, 0, 0, 0),
         };
         btn.FlatAppearance.BorderSize = 0;
-
-        btn.MouseEnter += (_, _) =>
-            btn.BackColor = ControlPaint.Dark(color, 0.1f);
-        btn.MouseLeave += (_, _) =>
-            btn.BackColor = color;
-
+        btn.Region = RoundedRegion(btn.Size, 8);
+        btn.MouseEnter += (_, _) => btn.BackColor = hover;
+        btn.MouseLeave += (_, _) => btn.BackColor = color;
         return btn;
     }
 
     // ── SignalR ──────────────────────────────────────────────────
-
-    /// <summary>
-    /// SignalR Hub-тай холбогдоно.
-    /// Дугаар авагдахад хүлээж буй тоо автоматаар шинэчлэгдэнэ.
-    /// Дугаар дуудагдахад дэлгэц шинэчлэгдэнэ.
-    /// </summary>
     private async Task ConnectSignalRAsync()
     {
         _hub = new HubConnectionBuilder()
@@ -210,18 +204,15 @@ public class MainForm : Form
             .WithAutomaticReconnect()
             .Build();
 
-        // Дугаар дуудагдахад
         _hub.On<int>("NumberCalled", number =>
         {
             Invoke(() =>
             {
-                _lblCurrentNumber.Text = number.ToString();
-                SetStatus($"✓  Дугаар {number} дуудагдлаа  •  {DateTime.Now:HH:mm:ss}",
-                    Color.SeaGreen);
+                _lblCurrentNumber.Text = number.ToString("D3");
+                SetStatus($"✓  Дугаар {number} дуудагдлаа  •  {DateTime.Now:HH:mm:ss}", ClrOk);
             });
         });
 
-        // Дугаар авагдахад хүлээж буй тоо шинэчлэгдэнэ
         _hub.On("QueueUpdated", async () =>
         {
             var count = await _queueService.GetWaitingCountAsync();
@@ -231,26 +222,21 @@ public class MainForm : Form
         try
         {
             await _hub.StartAsync();
-            SetStatus("Серверт холбогдлоо", Color.SeaGreen);
+            SetStatus("SignalR: ханш шинэчлэгдлээ", ClrOk);
         }
         catch
         {
-            SetStatus("SignalR холбогдож чадсангүй", Color.Crimson);
+            SetStatus("SignalR холбогдож чадсангүй", ClrErr);
         }
     }
 
-    // ── Logic ────────────────────────────────────────────────────
-
-    /// <summary>
-    /// Дараагийн хүлээж буй үйлчлүүлэгчийг дуудна.
-    /// </summary>
+    // ── Логик ────────────────────────────────────────────────────
     private async Task CallNextAsync()
     {
         SetBusy(true, "Дуудаж байна...");
         try
         {
             var ticket = await _queueService.CallNextAsync();
-
             if (ticket == null)
             {
                 MessageBox.Show(
@@ -258,19 +244,16 @@ public class MainForm : Form
                     "Мэдэгдэл",
                     MessageBoxButtons.OK,
                     MessageBoxIcon.Information);
-                SetStatus("Дараалал хоосон байна", Color.Gray);
+                SetStatus("Дараалал хоосон байна", ClrMuted);
                 return;
             }
-
-            _lblCurrentNumber.Text = ticket.Number.ToString();
-            SetStatus($"✓  Дугаар {ticket.Number} дуудагдлаа  •  {DateTime.Now:HH:mm:ss}",
-                Color.SeaGreen);
-
+            _lblCurrentNumber.Text = ticket.Number.ToString("D3");
+            SetStatus($"✓  Дугаар {ticket.Number} дуудагдлаа  •  {DateTime.Now:HH:mm:ss}", ClrOk);
             await RefreshWaitingCountAsync();
         }
         catch (Exception ex)
         {
-            SetStatus($"Алдаа: {ex.Message}", Color.Crimson);
+            SetStatus($"Алдаа: {ex.Message}", ClrErr);
         }
         finally
         {
@@ -278,26 +261,20 @@ public class MainForm : Form
         }
     }
 
-    /// <summary>
-    /// Апп нээгдэхэд одоогийн дугаарыг серверээс авч харуулна.
-    /// </summary>
     private async Task RefreshCurrentNumberAsync()
     {
         try
         {
             var number = await _queueService.GetCurrentNumberAsync();
-            _lblCurrentNumber.Text = number == 0 ? "—" : number.ToString();
+            _lblCurrentNumber.Text = number == 0 ? "—" : number.ToString("D3");
             await RefreshWaitingCountAsync();
         }
         catch
         {
-            SetStatus("Серверт холбогдож чадсангүй", Color.Crimson);
+            SetStatus("Серверт холбогдож чадсангүй", ClrErr);
         }
     }
 
-    /// <summary>
-    /// Хүлээж буй үйлчлүүлэгчдийн тоог шинэчилж харуулна.
-    /// </summary>
     private async Task RefreshWaitingCountAsync()
     {
         try
@@ -311,36 +288,60 @@ public class MainForm : Form
         }
     }
 
-    // ── Helpers ─────────────────────────────────────────────────
-
-    /// <summary>
-    /// Ачааллаж байх үед товчнуудыг идэвхгүй болгоно.
-    /// </summary>
-    private void SetBusy(bool busy, string message)
+    // ── Туслах методууд ──────────────────────────────────────────
+    private void SetBusy(bool busy, string msg)
     {
         _btnCallNext.Enabled = !busy;
         _btnTransfer.Enabled = !busy;
         _btnCurrency.Enabled = !busy;
-        if (!string.IsNullOrEmpty(message))
-            SetStatus(message, Color.DarkOrange);
+        if (!string.IsNullOrEmpty(msg))
+            SetStatus(msg, ClrWarn);
     }
 
-    /// <summary>
-    /// Доод хэсгийн статус мессеж болон өнгийг тохируулна.
-    /// </summary>
-    private void SetStatus(string message, Color color)
+    private void SetStatus(string msg, Color color)
     {
-        _lblStatus.Text = message;
+        if (InvokeRequired) { Invoke(() => SetStatus(msg, color)); return; }
+        _lblStatus.Text = msg;
         _lblStatus.ForeColor = color;
     }
 
-    /// <summary>
-    /// Form хаагдахад SignalR холболтыг таслана.
-    /// </summary>
+    // ── Paint туслахууд ──────────────────────────────────────────
+    private void PaintTitleBar(object? sender, PaintEventArgs e)
+    {
+        var g = e.Graphics;
+        g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+        DrawDot(g, new Point(14, 16), Color.FromArgb(224, 85, 85));
+        DrawDot(g, new Point(30, 16), Color.FromArgb(212, 160, 32));
+        DrawDot(g, new Point(46, 16), Color.FromArgb(90, 170, 90));
+    }
+
+    private void PaintCardBorder(object? sender, PaintEventArgs e)
+    {
+        using var pen = new Pen(ClrBorder, 1f);
+        var r = new Rectangle(0, 0, _pnlNumberCard.Width - 1, _pnlNumberCard.Height - 1);
+        e.Graphics.DrawRectangle(pen, r);
+    }
+
+    private static void DrawDot(System.Drawing.Graphics g, Point c, Color color)
+    {
+        using var b = new SolidBrush(color);
+        g.FillEllipse(b, c.X - 5, c.Y - 5, 11, 11);
+    }
+
+    private static System.Drawing.Region RoundedRegion(Size size, int r)
+    {
+        var path = new System.Drawing.Drawing2D.GraphicsPath();
+        path.AddArc(0, 0, r * 2, r * 2, 180, 90);
+        path.AddArc(size.Width - r * 2, 0, r * 2, r * 2, 270, 90);
+        path.AddArc(size.Width - r * 2, size.Height - r * 2, r * 2, r * 2, 0, 90);
+        path.AddArc(0, size.Height - r * 2, r * 2, r * 2, 90, 90);
+        path.CloseFigure();
+        return new System.Drawing.Region(path);
+    }
+
     protected override async void OnFormClosing(FormClosingEventArgs e)
     {
-        if (_hub != null)
-            await _hub.DisposeAsync();
+        if (_hub != null) await _hub.DisposeAsync();
         base.OnFormClosing(e);
     }
 }

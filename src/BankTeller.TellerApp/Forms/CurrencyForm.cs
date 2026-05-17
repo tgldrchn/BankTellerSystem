@@ -54,7 +54,7 @@ public class CurrencyForm : Form
         };
         header.Controls.Add(new Label
         {
-            Text = "💱  Валютын ханш",
+            Text = "Валютын ханш",
             ForeColor = Color.White,
             Font = new Font("Segoe UI", 14, FontStyle.Bold),
             Dock = DockStyle.Fill,

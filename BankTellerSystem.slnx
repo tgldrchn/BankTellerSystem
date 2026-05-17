@@ -5,6 +5,7 @@
     <Project Path="src/BankTeller.CurrencyDisplay/BankTeller.CurrencyDisplay.csproj">
       <Build Solution="Debug|*" Project="false" />
     </Project>
+    <Project Path="src/BankTeller.NumberDisplay/BankTeller.NumberDisplay.csproj" />
     <Project Path="src/BankTeller.NumberTerminal/BankTeller.NumberTerminal.csproj" />
     <Project Path="src/BankTeller.TellerApp/BankTeller.TellerApp.csproj" />
   </Folder>

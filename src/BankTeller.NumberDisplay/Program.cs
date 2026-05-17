@@ -1,6 +1,6 @@
-using BankTeller.NumberTerminal.Forms;
+using BankTeller.NumberDisplay.Forms;
 
-namespace BankTeller.NumberTerminal;
+namespace BankTeller.NumberDisplay;
 
 static class Program
 {
@@ -8,6 +8,6 @@ static class Program
     static void Main()
     {
         ApplicationConfiguration.Initialize();
-        Application.Run(new TerminalForm());
+        Application.Run(new DisplayForm());
     }
 }
