@@ -1,4 +1,5 @@
-﻿using System.Net.Sockets;
+﻿using Microsoft.Extensions.Configuration;
+using System.Net.Sockets;
 using System.Text;
 
 namespace BankTeller.NumberDisplay.Services;
@@ -6,13 +7,14 @@ namespace BankTeller.NumberDisplay.Services;
 /// <summary>
 /// Socket клиент.
 /// API-ийн Socket серверт холбогдож дугаар хүлээн авна.
+/// appsettings.json-с холболтын хаяг, портыг уншина.
 /// </summary>
 public class SocketClient : IDisposable
 {
     private TcpClient? _client;
     private NetworkStream? _stream;
-    private const string Host = "localhost";
-    private const int Port = 5201;
+    private readonly string _host;
+    private readonly int _port;
 
     /// <summary>Шинэ дугаар ирэхэд энэ event дуудагдана</summary>
     public event Action<int>? NumberReceived;
@@ -20,8 +22,19 @@ public class SocketClient : IDisposable
     /// <summary>Холболт тасарвал энэ event дуудагдана</summary>
     public event Action? Disconnected;
 
+    public SocketClient()
+    {
+        var config = new ConfigurationBuilder()
+            .AddJsonFile("appsettings.json", optional: true)
+            .Build();
+
+        _host = config["SocketHost"] ?? "localhost";
+        _port = int.TryParse(config["SocketPort"], out var port) ? port : 5201;
+    }
+
     /// <summary>
     /// Socket серверт холбогдож дугаар хүлээн авч эхэлнэ.
+    /// Холболт тасарвал 3 секунд хүлээгээд дахин холбогдоно.
     /// </summary>
     public async Task ConnectAsync(CancellationToken ct)
     {
@@ -30,16 +43,14 @@ public class SocketClient : IDisposable
             try
             {
                 _client = new TcpClient();
-                await _client.ConnectAsync(Host, Port, ct);
+                await _client.ConnectAsync(_host, _port, ct);
                 _stream = _client.GetStream();
-
                 await ReceiveAsync(ct);
             }
             catch (OperationCanceledException) { break; }
             catch
             {
                 Disconnected?.Invoke();
-                // 3 секунд хүлээгээд дахин холбогдоно
                 await Task.Delay(3000, ct);
             }
         }
@@ -47,6 +58,7 @@ public class SocketClient : IDisposable
 
     /// <summary>
     /// Серверээс дугаар хүлээн авна.
+    /// \n тэмдэгээр тусгаарлагдсан дугааруудыг боловсруулна.
     /// </summary>
     private async Task ReceiveAsync(CancellationToken ct)
     {
@@ -60,7 +72,6 @@ public class SocketClient : IDisposable
 
             sb.Append(Encoding.UTF8.GetString(buffer, 0, read));
 
-            // \n тэмдэгээр дугаар тусгаарлагдана
             var lines = sb.ToString().Split('\n', StringSplitOptions.RemoveEmptyEntries);
             foreach (var line in lines)
             {

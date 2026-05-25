@@ -1,0 +1,5 @@
+{
+  "ApiBaseUrl": "http://localhost:5200",
+  "SocketHost": "localhost",
+  "SocketPort": "5201"
+}

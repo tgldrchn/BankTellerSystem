@@ -1,8 +1,9 @@
-﻿using System.Drawing;
-using System.Windows.Forms;
-using BankTeller.Core.Interfaces;
+﻿using BankTeller.Core.Interfaces;
 using BankTeller.TellerApp.Services;
 using Microsoft.AspNetCore.SignalR.Client;
+using Microsoft.Extensions.Configuration;
+using System.Drawing;
+using System.Windows.Forms;
 
 namespace BankTeller.TellerApp.Forms;
 
@@ -24,7 +25,7 @@ public class MainForm : Form
     private Panel _pnlNumberCard = null!;
     private Label _lblCurrentNumber = null!;
     private Label _lblWaiting = null!;
-    private Label _lblStatus = null!;
+    private Label? _lblStatus;
     private Button _btnCallNext = null!;
     private Button _btnTransfer = null!;
     private Button _btnCurrency = null!;
@@ -197,10 +198,17 @@ public class MainForm : Form
     }
 
     // ── SignalR ──────────────────────────────────────────────────
+
     private async Task ConnectSignalRAsync()
     {
+        var config = new ConfigurationBuilder()
+            .AddJsonFile("appsettings.json", optional: true)
+            .Build();
+
+        var signalRUrl = config["SignalRUrl"] ?? "http://localhost:5200/hubs/bank";
+
         _hub = new HubConnectionBuilder()
-            .WithUrl("http://localhost:5200/hubs/bank")
+            .WithUrl(signalRUrl)
             .WithAutomaticReconnect()
             .Build();
 
@@ -222,7 +230,7 @@ public class MainForm : Form
         try
         {
             await _hub.StartAsync();
-            SetStatus("SignalR: ханш шинэчлэгдлээ", ClrOk);
+            SetStatus("SignalR: холбогдлоо", ClrOk);
         }
         catch
         {

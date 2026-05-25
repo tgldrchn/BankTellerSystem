@@ -1,12 +1,14 @@
 ﻿using BankTeller.Core.DTOs;
 using BankTeller.Core.Interfaces;
 using BankTeller.Core.Models;
+using Microsoft.Extensions.Configuration;
 using System.Net.Http.Json;
 
 namespace BankTeller.TellerApp.Services;
 
 /// <summary>
 /// API-тай холбогдох валютын үйлчилгээ.
+/// appsettings.json-с холболтын хаягийг уншина.
 /// </summary>
 public class ApiCurrencyService : ICurrencyService
 {
@@ -14,7 +16,12 @@ public class ApiCurrencyService : ICurrencyService
 
     public ApiCurrencyService()
     {
-        _http = new HttpClient { BaseAddress = new Uri("http://localhost:5200") };
+        var config = new ConfigurationBuilder()
+            .AddJsonFile("appsettings.json", optional: true)
+            .Build();
+
+        var baseUrl = config["ApiBaseUrl"] ?? "http://localhost:5200";
+        _http = new HttpClient { BaseAddress = new Uri(baseUrl) };
     }
 
     public async Task<List<CurrencyRate>> GetAllRatesAsync()
