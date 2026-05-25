@@ -7,7 +7,7 @@ builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
 builder.Services.AddScoped(sp =>
-    new HttpClient { BaseAddress = new Uri("http://localhost:5200") });
+    new HttpClient { BaseAddress = new Uri("http://0.0.0.0:5200") });
 
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();

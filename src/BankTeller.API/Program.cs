@@ -9,6 +9,7 @@ using BankTeller.API.Sockets;
 
 
 var builder = WebApplication.CreateBuilder(args);
+builder.WebHost.UseUrls("http://0.0.0.0:5200");
 
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
